@@ -17,7 +17,6 @@ def _get_current_row_column():
 
 def _get_blame_output():
     file_path = os.path.join(os.getcwd(), vim.eval("expand('%:t')"))
-    print('filepath: ' + file_path)
     output = subprocess.check_output(['git', 'blame', file_path])
     output = output.decode('utf-8').split('\n')[:-1]
     return _map_output(output)
@@ -42,11 +41,36 @@ def _map_output(output):
     return output
 
 
+def _get_longest_line():
+    longest, current = (0, 1)
+    total_lines = int(vim.eval('line("$")'))
+    (row, col) = vim.current.window.cursor
+
+    while current <= total_lines:
+        vim.current.window.cursor = (current, 1)
+        column_length = int(vim.eval('col("$")'))
+        if column_length > longest:
+            longest = column_length
+        current += 1
+
+    vim.current.window.cursor = (row, col)
+    return longest
+
+
+def _setline():
+    global line_meta_mapping
+
+    longest_line_length = _get_longest_line()
+    (row, col) = _get_current_row_column()
+
+
+
 def main():
     global line_meta_mapping
 
     output = _get_blame_output()
     (row, col) = _get_current_row_column()
+    print(_get_longest_line())
 
 main()
 EOF
