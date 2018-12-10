@@ -1,13 +1,20 @@
 " TODO: add syntax highlighting
 " TODO: set line on every line change
 " TODO: add delay after every line change/function invocation
-" TODO: skip lines that already have been calculated
+" TODO: skip empty lines 
 
 
 let g:longest_line_length = 0
+let g:lines_visited = []
+
+function! s:syntax() abort
+    syntax match BLAMELINE /::.*::/
+    highlight link BLAMELINE Comment
+endfunction
 
 function! blameline#run() abort
     let py_exe = has('python3') ? 'python3' : 'python'
+    call s:syntax()
     execute py_exe "<< EOF"
 
 import os
@@ -42,7 +49,7 @@ def _map_output(output):
         (commit, author, date, time) = (_line[:4])
         line_no = _line[5]
 
-        meta = '{}: {} {} {}'.format(author, commit, time, date)
+        meta = ':: {}: {} {} {} ::'.format(author, commit, time, date)
         line_meta_mapping[line_no] = meta
 
     return output
@@ -76,6 +83,12 @@ def _setline():
     cursor_position = vim.current.window.cursor
     longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
+
+    if row in vim.eval('g:lines_visited'):
+        return
+    else:
+        vim.command('call add(g:lines_visited, {})'.format(int(row)))
+
     current_line_length = _get_current_line_length()
     current_line_content = vim.current.line
     meta_content = ' '*(20) + line_meta_mapping[row]
