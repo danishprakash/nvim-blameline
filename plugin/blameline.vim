@@ -4,8 +4,10 @@
 " TODO: skip empty lines 
 
 
-let g:longest_line_length = 0
 let g:lines_visited = []
+let g:line_meta_mapping = {}
+let g:longest_line_length = 0
+let g:line_content_mapping= {}
 
 function! s:syntax() abort
     syntax match BLAMELINE /::.*::/
@@ -25,9 +27,6 @@ import pprint
 import threading
 import subprocess
 
-line_meta_mapping = dict()
-line_content_mapping = dict()
-
 
 def _get_current_row_column():
     return (vim.eval("getpos('.')")[1:3])
@@ -41,8 +40,6 @@ def _get_blame_output():
 
 
 def _map_output(output):
-    global line_meta_mapping
-
     for line in output:
         _line = (re.sub('[()]', '', line))
         _line = _line.split(" ")
@@ -52,7 +49,9 @@ def _map_output(output):
         line_no = _line[5]
 
         meta = ':: {}: {} {} {} ::'.format(author, commit, time, date)
-        line_meta_mapping[line_no] = meta
+        temp = vim.vars['line_meta_mapping']
+        temp[line_no] = meta
+        vim.vars['line_meta_mapping'] = temp
 
     return output
 
@@ -81,9 +80,6 @@ def _get_current_line_length():
 
 
 def _setline():
-    global line_meta_mapping
-    global line_content_mapping
-
     cursor_position = vim.current.window.cursor
     longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
@@ -95,44 +91,37 @@ def _setline():
 
     current_line_length = _get_current_line_length()
     current_line_content = vim.current.line
-    line_content_mapping[row] = current_line_content
-    meta_content = ' '*(20) + line_meta_mapping[row]
+
+    temp = vim.vars['line_content_mapping']
+    temp[row] = current_line_content
+    vim.vars['line_content_mapping'] = temp
+
+    temp1 = vim.vars['line_meta_mapping']
+    meta_content = ' ' * (20) + temp1[row]
     vim.current.line += meta_content
     vim.current.window.cursor = cursor_position
 
 
 def _unsetline():
-    global line_meta_mapping
     cursor_position = vim.current.window.cursor
     (row, col) = _get_current_row_column()
-    try:
-        vim.current.line = line_content_mapping[int(row)]
-    except:
-        pass
-
+    temp = vim.vars['line_content_mapping']
+    vim.current.line = temp[row]
 
 
 def main():
-    global line_meta_mapping
-    global line_content_mapping
-
     if int(vim.eval('g:longest_line_length')) == 0:
         _get_longest_line()
 
     output = _get_blame_output()
     (row, col) = _get_current_row_column()
 
-    print(line_content_mapping)
-
     flag = int(vim.eval('a:flag'))
     if flag == 0:
-        print("here")
         _setline()
     elif flag == 1:
-        print("there")
         _unsetline()
     else:
-        print("ERROR")
         return
 
 main()
