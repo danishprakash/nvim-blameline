@@ -12,7 +12,7 @@ function! s:syntax() abort
     highlight link BLAMELINE Comment
 endfunction
 
-function! blameline#run() abort
+function! blameline#run(flag) abort
     let py_exe = has('python3') ? 'python3' : 'python'
     call s:syntax()
     execute py_exe "<< EOF"
@@ -20,11 +20,13 @@ function! blameline#run() abort
 import os
 import re
 import vim
+import time
 import pprint
 import threading
 import subprocess
 
 line_meta_mapping = dict()
+line_content_mapping = dict()
 
 
 def _get_current_row_column():
@@ -80,6 +82,8 @@ def _get_current_line_length():
 
 def _setline():
     global line_meta_mapping
+    global line_content_mapping
+
     cursor_position = vim.current.window.cursor
     longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
@@ -91,24 +95,49 @@ def _setline():
 
     current_line_length = _get_current_line_length()
     current_line_content = vim.current.line
+    line_content_mapping[row] = current_line_content
     meta_content = ' '*(20) + line_meta_mapping[row]
     vim.current.line += meta_content
     vim.current.window.cursor = cursor_position
 
 
+def _unsetline():
+    global line_meta_mapping
+    cursor_position = vim.current.window.cursor
+    (row, col) = _get_current_row_column()
+    try:
+        vim.current.line = line_content_mapping[int(row)]
+    except:
+        pass
+
+
+
 def main():
     global line_meta_mapping
+    global line_content_mapping
 
     if int(vim.eval('g:longest_line_length')) == 0:
         _get_longest_line()
 
     output = _get_blame_output()
     (row, col) = _get_current_row_column()
-    _setline()
+
+    print(line_content_mapping)
+
+    flag = int(vim.eval('a:flag'))
+    if flag == 0:
+        print("here")
+        _setline()
+    elif flag == 1:
+        print("there")
+        _unsetline()
+    else:
+        print("ERROR")
+        return
 
 main()
 EOF
 
 endfunction
 
-command! -nargs=0 Blameline call blameline#run()
+command! -nargs=1 Blameline call blameline#run(<args>)
