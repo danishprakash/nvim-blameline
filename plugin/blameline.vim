@@ -1,7 +1,11 @@
-" TODO: add syntax highlighting
-" TODO: set line on every line change
 " TODO: add delay after every line change/function invocation
 " TODO: skip empty lines 
+" TODO: figure out an event for line change
+" TODO: what to do -> we need to make sure that we change the current line
+"       only when we are on that line and it should be reverted back to normal
+"       as soon as we move away from this line
+" TODO: also you need to figure out how to avoid the cursor to move
+"       to the metadata on the same line while pressing `w` or `b`
 
 
 let g:lines_visited = []
@@ -72,7 +76,7 @@ def _get_longest_line():
 
     vim.current.window.cursor = cursor_position
     longest_line_length = longest
-    vim.command('let g:longest_line_length={}'.format(longest))
+    vim.vars['longest_line_length'] = longest
 
 
 def _get_current_line_length():
