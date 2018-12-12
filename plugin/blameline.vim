@@ -1,6 +1,5 @@
 " TODO: also you need to figure out how to avoid the cursor to move
 "       to the metadata on the same line while pressing `w` or `b`
-" TODO: skip empty lines 
 " TODO: add header for this file, similar to py-splice
 " TODO: raise proper errors
 " TODO: use threads for parallel execution
@@ -86,6 +85,9 @@ def _get_current_line_length():
 
 
 def _setline():
+    if vim.current.line == '':
+        return
+
     cursor_position = vim.current.window.cursor
     longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
