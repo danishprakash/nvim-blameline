@@ -1,29 +1,27 @@
-" TODO: figure out an event for line change
-" TODO: what to do -> we need to make sure that we change the current line
-"       only when we are on that line and it should be reverted back to normal
-"       as soon as we move away from this line
 " TODO: also you need to figure out how to avoid the cursor to move
 "       to the metadata on the same line while pressing `w` or `b`
-" TODO: add delay after every line change/function invocation
 " TODO: skip empty lines 
 " TODO: add header for this file, similar to py-splice
 " TODO: raise proper errors
-" TODO: CursorHold to show commit meta (_setline())
-" TODO: CursorMoved to hide commit meta (_unsetline())
 " TODO: use threads for parallel execution
+" TODO: add delay after every line change/function invocation
+"       see below
 " TODO: add g:blameline_delay for offset of meta display
 "       this will update the updatetime value of CursorHold
 "       event in vim
+" TODO: skip files that are not a valid git directory 
 
 let g:line_visited = ""
 let g:line_meta_mapping = {}
 let g:longest_line_length = 0
 let g:line_content_mapping = {}
 
+
 function! s:syntax() abort
     syntax match BLAMELINE /::.*::/
     highlight link BLAMELINE Comment
 endfunction
+
 
 function! blameline#run(flag) abort
     let py_exe = has('python3') ? 'python3' : 'python'
@@ -45,10 +43,11 @@ def _get_blame_output():
     file_path = os.path.join(os.getcwd(), vim.eval("expand('%:t')"))
     output = subprocess.check_output(['git', 'blame', file_path])
     output = output.decode('utf-8').split('\n')[:-1]
-    return _map_output(output)
+    _map_output(output)
 
 
 def _map_output(output):
+    temp = dict()
     for line in output:
         _line = (re.sub('[()]', '', line))
         _line = _line.split(" ")
@@ -58,11 +57,9 @@ def _map_output(output):
         line_no = _line[5]
 
         meta = ':: {}: {} {} {} ::'.format(author, commit, time, date)
-        temp = vim.vars['line_meta_mapping']
         temp[line_no] = meta
-        vim.vars['line_meta_mapping'] = temp
 
-    return output
+    vim.vars['line_meta_mapping'] = temp
 
 
 def _get_longest_line():
@@ -92,7 +89,6 @@ def _setline():
     cursor_position = vim.current.window.cursor
     longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
-
     vim.vars['line_visited'] = row
 
     current_line_length = _get_current_line_length()
@@ -140,7 +136,7 @@ def main():
 
     temp = vim.vars['line_meta_mapping']
     if not temp:
-        output = _get_blame_output()
+        _get_blame_output()
 
     flag = int(vim.eval('a:flag'))
     if flag == 0:
