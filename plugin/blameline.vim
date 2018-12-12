@@ -1,5 +1,6 @@
-" TODO: also you need to figure out how to avoid the cursor to move
-"       to the metadata on the same line while pressing `w` or `b`
+" TODO: also you need to figure out how to avoid the cursor from
+"       moving to the metadata on the same line while pressing
+"       `w` or `e`
 " TODO: add header for this file, similar to py-splice
 " TODO: raise proper errors
 " TODO: use threads for parallel execution
@@ -12,13 +13,25 @@
 
 let g:line_visited = ""
 let g:line_meta_mapping = {}
-let g:longest_line_length = 0
 let g:line_content_mapping = {}
 
 
 function! s:syntax() abort
     syntax match BLAMELINE /::.*::/
     highlight link BLAMELINE Comment
+endfunction
+
+
+function! blameline#run(flag) abort
+    let py_exe = has('python3') ? 'python3' : 'python'
+    call s:syntax()
+    execute py_exe "<< EOF"
+
+import vim
+
+
+
+EOF
 endfunction
 
 
@@ -36,6 +49,10 @@ import subprocess
 
 def _get_current_row_column():
     return (vim.eval("getpos('.')")[1:3])
+
+
+def _get_current_line_length():
+    return int(vim.eval('col("$")'))
 
 
 def _get_blame_output():
@@ -61,35 +78,11 @@ def _map_output(output):
     vim.vars['line_meta_mapping'] = temp
 
 
-def _get_longest_line():
-    global longest_line_length
-
-    longest, current = (0, 1)
-    total_lines = int(vim.eval('line("$")'))
-    cursor_position = vim.current.window.cursor
-
-    while current <= total_lines:
-        vim.current.window.cursor = (current, 1)
-        column_length = int(vim.eval('col("$")'))
-        if column_length > longest:
-            longest = column_length
-        current += 1
-
-    vim.current.window.cursor = cursor_position
-    longest_line_length = longest
-    vim.vars['longest_line_length'] = longest
-
-
-def _get_current_line_length():
-    return int(vim.eval('col("$")'))
-
-
 def _setline():
     if vim.current.line == '':
         return
 
     cursor_position = vim.current.window.cursor
-    longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
     vim.vars['line_visited'] = row
 
@@ -124,18 +117,7 @@ def _raise_error():
     pass
 
 
-def manage():
-    if int(vim.eval('g:longest_line_length')) == 0:
-        _get_longest_line()
-
-    output = _get_blame_output()
-    (row, col) = _get_current_row_column()
-
-
 def main():
-    if int(vim.eval('g:longest_line_length')) == 0:
-        _get_longest_line()
-
     temp = vim.vars['line_meta_mapping']
     if not temp:
         _get_blame_output()
