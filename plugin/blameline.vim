@@ -11,6 +11,9 @@
 " TODO: CursorHold to show commit meta (_setline())
 " TODO: CursorMoved to hide commit meta (_unsetline())
 " TODO: use threads for parallel execution
+" TODO: add g:blameline_delay for offset of meta display
+"       this will update the updatetime value of CursorHold
+"       event in vim
 
 let g:line_visited = ""
 let g:line_meta_mapping = {}
@@ -30,8 +33,6 @@ function! blameline#run(flag) abort
 import os
 import re
 import vim
-import time
-import pprint
 import threading
 import subprocess
 
@@ -92,7 +93,7 @@ def _setline():
     longest_line_length = int(vim.eval('g:longest_line_length'))
     (row, col) = _get_current_row_column()
 
-    vim.vars['line_visited'] = int(row)
+    vim.vars['line_visited'] = row
 
     current_line_length = _get_current_line_length()
     current_line_content = vim.current.line
@@ -100,7 +101,6 @@ def _setline():
     temp = vim.vars['line_content_mapping']
     temp[int(row)] = current_line_content
     vim.command('let g:line_content_mapping = {}'.format(temp))
-    print(vim.vars['line_content_mapping'])
 
     temp1 = vim.vars['line_meta_mapping']
     meta_content = ' ' * (20) + temp1[row]
@@ -109,11 +109,16 @@ def _setline():
 
 
 def _unsetline():
-    cursor_position = vim.current.window.cursor
-    (row, col) = _get_current_row_column()
-    row = vim.vars['g:line_visited']
+    row = vim.vars['line_visited']
+    if not row:
+        return
+
+    (crow, ccol) = _get_current_row_column()
+    if crow == row:
+        return
+
     temp = vim.vars['line_content_mapping']
-    vim.eval('setline({}, {})'.format(row, temp[row]))
+    vim.eval('setline({}, "{}")'.format(row, temp[row]))
 
 
 def _raise_error():
@@ -133,8 +138,9 @@ def main():
     if int(vim.eval('g:longest_line_length')) == 0:
         _get_longest_line()
 
-    output = _get_blame_output()
-    (row, col) = _get_current_row_column()
+    temp = vim.vars['line_meta_mapping']
+    if not temp:
+        output = _get_blame_output()
 
     flag = int(vim.eval('a:flag'))
     if flag == 0:
@@ -152,5 +158,5 @@ command! -nargs=1 Blameline call blameline#run(<args>)
 augroup blame
     autocmd!
     autocmd CursorHold * :Blameline(0)
-    " autocmd CursorMoved * call blameline#run('1')
+    autocmd CursorMoved * :Blameline(1)
 augroup END
