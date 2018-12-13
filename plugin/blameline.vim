@@ -4,16 +4,19 @@
 " TODO: add header for this file, similar to py-splice
 " TODO: raise proper errors
 " TODO: use threads for parallel execution
-" TODO: add delay after every line change/function invocation
-"       see below
-" TODO: add g:blameline_delay for offset of meta display
-"       this will update the updatetime value of CursorHold
-"       event in vim
 " TODO: skip files that are not a valid git directory 
+" TODO: handle buffer change
+" TODO: handle file change using some other event (TextChanged or FileChanged)
+" TODO: pull out the _get_blame_output() function and create another
+"       user accessible command which would invoke this function 
+"       to update the git blame output and also would do this on every
+"       file change (see above todo)
+
 
 let g:line_visited = ""
 let g:line_meta_mapping = {}
 let g:line_content_mapping = {}
+let g:blameline_update_time = 4000
 
 
 function! s:syntax() abort
@@ -22,16 +25,8 @@ function! s:syntax() abort
 endfunction
 
 
-function! blameline#run(flag) abort
-    let py_exe = has('python3') ? 'python3' : 'python'
-    call s:syntax()
-    execute py_exe "<< EOF"
-
-import vim
-
-
-
-EOF
+function! s:set_update_time() abort
+    let &updatetime=g:blameline_update_time
 endfunction
 
 
@@ -130,7 +125,6 @@ def main():
 
 main()
 EOF
-
 endfunction
 
 command! -nargs=1 Blameline call blameline#run(<args>)
