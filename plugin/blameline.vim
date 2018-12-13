@@ -56,7 +56,7 @@ def _get_current_line_length():
 
 
 def _get_blame_output():
-    file_path = os.path.join(os.getcwd(), vim.eval("expand('%:t')"))
+    file_path = vim.eval('expand("%:p")')
     output = subprocess.check_output(['git', 'blame', file_path])
     output = output.decode('utf-8').split('\n')[:-1]
     _map_output(output)
