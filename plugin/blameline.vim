@@ -3,6 +3,7 @@ function! blameline#run() abort
     execute py_exe "<< EOF"
 
 import os
+import re
 import vim
 import pprint
 import threading
@@ -17,7 +18,6 @@ def _get_current_row_column():
 
 def _get_blame_output():
     file_path = os.path.join(os.getcwd(), vim.eval("expand('%:t')"))
-    print('filepath: ' + file_path)
     output = subprocess.check_output(['git', 'blame', file_path])
     output = output.decode('utf-8').split('\n')[:-1]
     return _map_output(output)
@@ -27,19 +27,27 @@ def _map_output(output):
     global line_meta_mapping
 
     for line in output:
+        line = re.sub('[()]', '', line)
         _line = line.split(" ")
         _line = [x for x in _line if x]
-
-        line_no = _line[5].replace(')', '')
-        commit = _line[0]
-        author = _line[1].replace('(', '')
-        time = _line[3]
-        date = _line[2]
-
+        (commit, author, date, time) = _line[0:4]
+        line_no = _line[5]
         meta = '{}: {} {} {}'.format(author, commit, time, date)
         line_meta_mapping[line_no] = meta
 
     return output
+
+
+def _get_longest_line_length():
+    line_length = 0
+    while line_length <= 0:
+        ex
+
+
+def _set_meta_on_line():
+    global line_meta_mapping
+    (row, col) = _get_current_row_column()
+    col += 5
 
 
 def main():
