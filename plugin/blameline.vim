@@ -62,6 +62,7 @@ endfunction
 " mapping in the following form:
 " {<line_no>: <content + blame>}
 function! s:get_blame_output() abort
+    echo "inside blame"
     let py_exe = has('python3') ? 'python3' : 'python'
     execute py_exe "<< EOF"
 
@@ -87,7 +88,7 @@ def create_mapping(output):
         (commit, author, date, time) = (_line[:4])
         line_no = _line[5]
 
-        meta = ':: {}: {} {} {} ::'.format(author, commit, time, date)
+        meta = ':: {} - {} {} {} ::'.format(author, commit, time, date)
         temp[line_no] = meta
 
     vim.vars['line_meta_mapping'] = temp
@@ -146,7 +147,8 @@ def _unsetline():
     if crow == row or row not in line_content_mapping.keys():
         return
 
-    vim.eval("setline({}, '{}')".format(row, temp[row]))
+    print(line_content_mapping)
+    vim.eval("setline({}, '{}')".format(row, line_content_mapping[row]))
 
 
 def _raise_error():
@@ -170,9 +172,11 @@ EOF
 endfunction
 
 command! -nargs=1 Blameline call blameline#init(<args>)
+command! -nargs=0 BlamelineUpdate call s:get_blame_output(<args>)
 
 augroup blame
     autocmd!
     autocmd CursorHold * :Blameline(0)
     autocmd CursorMoved * :Blameline(1)
+    autocmd TextChanged * :BlamelineUpdate
 augroup END
