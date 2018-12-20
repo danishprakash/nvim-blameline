@@ -14,4 +14,5 @@ augroup blame
     autocmd CursorHold * :Blameline(0)
     autocmd CursorMoved * :Blameline(1)
     autocmd TextChanged * :BlamelineUpdate
+    autocmd BufWinEnter * :BlamelineUpdate
 augroup END
