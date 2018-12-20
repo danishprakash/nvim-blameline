@@ -2,21 +2,14 @@
 "       moving to the metadata on the same line while pressing
 "       `w` or `e`
 " TODO: add header for this file, similar to py-splice
-" TODO: raise proper errors
 " TODO: skip files that are not a valid git directory 
 " TODO: handle buffer change
-" TODO: handle file change using some other event (TextChanged or FileChanged)
-" TODO: pull out the _get_blame_output() function and create another
-"       user accessible command which would invoke this function 
-"       to update the git blame output and also would do this on every
-"       file change (see above todo)
 " TODO: ask for user confirmation if the file has been changed locally
 "       before starting the plugin
-" TODO: if file has changed, use TextChanged to run blame_output()
-"       again and skip lines for whose blame output is not there
 " TODO: need to figure out how to escape lines with single/double
 "       quotes beginning/ending
-"
+
+
 let g:line_visited = ""
 let g:line_meta_mapping = {}
 let g:line_content_mapping = {}
@@ -45,6 +38,31 @@ function! s:err(msg) abort
 endfunction
 
 
+function! s:git_tracked() abort
+    let py_exe = has('python3') ? 'python3' : 'python'
+    execute py_exe "<< EOF"
+
+import vim
+import subprocess
+
+
+def is_file_git_tracked():
+    file_path = vim.eval('expand("%:p")')
+    process = subprocess.Popen(['git', 'ls-files', '--error-unmatch', file_path], stdout=subprocess.PIPE)
+    process.communicate()[0]
+    if process.returncode != 0:
+        vim.command('let retvalue={}'.format(1))
+    else:
+        vim.command('let retvalue={}'.format(0))
+
+
+is_file_git_tracked()
+EOF
+
+    return l:retvalue
+endfunction
+
+
 " entry point for the plugin
 " checks for git and python
 " and calls other functions
@@ -52,6 +70,12 @@ function! blameline#init(flag) abort
     if !executable('git')
         return s:err("git is required")
     endif
+
+    call s:git_tracked()
+    if s:git_tracked()
+        return
+    endif
+
     call s:set_update_time()
     call blameline#run(a:flag)
 endfunction
@@ -62,7 +86,6 @@ endfunction
 " mapping in the following form:
 " {<line_no>: <content + blame>}
 function! s:get_blame_output() abort
-    echo "inside blame"
     let py_exe = has('python3') ? 'python3' : 'python'
     execute py_exe "<< EOF"
 
@@ -147,13 +170,11 @@ def _unsetline():
     if crow == row or row not in line_content_mapping.keys():
         return
 
-    print(line_content_mapping)
     vim.eval("setline({}, '{}')".format(row, line_content_mapping[row]))
 
 
 def _raise_error():
     print("Blameline: Invalid argument")
-    pass
 
 
 def main():
