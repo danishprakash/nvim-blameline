@@ -1,13 +1,9 @@
-" TODO: also you need to figure out how to avoid the cursor from
-"       moving to the metadata on the same line while pressing
-"       `w` or `e`
-" TODO: add header for this file, similar to py-splice
-" TODO: skip files that are not a valid git directory 
-" TODO: handle buffer change
-" TODO: ask for user confirmation if the file has been changed locally
-"       before starting the plugin
-" TODO: need to figure out how to escape lines with single/double
-"       quotes beginning/ending
+" =============================================================
+" Name:         vim-blameline
+" Maintainer:   Danish Prakash
+" HomePage:     https://github.com/danishprakash/vim-blameline
+" License:      GNU GPL
+" =============================================================
 
 
 let g:line_visited = ""
