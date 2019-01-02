@@ -97,17 +97,35 @@ def git_blame():
     create_mapping(output)
 
 
+def relative_date(dt):
+    return dt
+
+
+def get_commit_message(commit):
+    cmd = 'git log --format=%ar -n 1 {}'.format(commit)
+    output = subprocess.check_output(cmd.split())
+    return output.decode("utf-8")
+
+
 def create_mapping(output):
     temp = dict()
+    commit_msg_mapping = dict()
     for line in output:
         _line = (re.sub('[()]', '', line))
         _line = _line.split(" ")
         _line = [x for x in _line if x]
 
         (commit, author, date, time) = (_line[:4])
+
+        if commit not in commit_msg_mapping:
+            msg = get_commit_message(commit)
+            commit_msg_mapping[commit] = msg
+        else:
+            msg = commit_msg_mapping[commit]
+
         line_no = _line[5]
 
-        meta = ':: {} - {} {} {} ::'.format(author, commit, time, date)
+        meta = ':: {}, {} {} - {} ::'.format(author, msg, time, date)
         temp[line_no] = meta
 
     vim.vars['line_meta_mapping'] = temp
