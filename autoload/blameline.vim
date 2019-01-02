@@ -8,6 +8,8 @@
 
 let g:line_visited = ""
 let g:line_meta_mapping = {}
+let g:line_commit_mapping = {}
+let g:commit_meta_mapping = {}
 let g:line_content_mapping = {}
 let g:blameline_update_time = 4000
 
@@ -97,38 +99,27 @@ def git_blame():
     create_mapping(output)
 
 
-def relative_date(dt):
-    return dt
-
-
-def get_commit_message(commit):
-    cmd = 'git log --format=%ar -n 1 {}'.format(commit)
-    output = subprocess.check_output(cmd.split())
-    return output.decode("utf-8")
-
-
 def create_mapping(output):
-    temp = dict()
-    commit_msg_mapping = dict()
+    line_commit_mapping = dict()
+    commit_meta_mapping = vim.vars['commit_meta_mapping']
+
     for line in output:
         _line = (re.sub('[()]', '', line))
         _line = _line.split(" ")
         _line = [x for x in _line if x]
-
-        (commit, author, date, time) = (_line[:4])
-
-        if commit not in commit_msg_mapping:
-            msg = get_commit_message(commit)
-            commit_msg_mapping[commit] = msg
-        else:
-            msg = commit_msg_mapping[commit]
-
         line_no = _line[5]
+        commit = _line[0]
 
-        meta = ':: {}, {} {} - {} ::'.format(author, msg, time, date)
-        temp[line_no] = meta
+        if commit not in commit_meta_mapping.keys():
+            (commit, author, date, time) = (_line[:4])
+            meta = ':: {}, {} {} - {} ::'.format(author, commit, time, date)
+            commit_meta_mapping[commit] = meta
 
-    vim.vars['line_meta_mapping'] = temp
+        line_commit_mapping[line_no] = commit
+
+    vim.vars['line_commit_mapping'] = line_commit_mapping
+    vim.vars['commit_meta_mapping'] = commit_meta_mapping
+
 
 git_blame()
 EOF
@@ -155,21 +146,20 @@ def _setline():
     if vim.current.line == '':
         return
 
-    line_meta_mapping = vim.vars['line_meta_mapping']
+    line_commit_mapping = vim.vars['line_commit_mapping']
+    commit_meta_mapping = vim.vars['commit_meta_mapping']
     (row, col) = _get_current_row_column()
-    if row not in line_meta_mapping.keys():
+    if row not in line_commit_mapping.keys():
         return
 
     cursor_position = vim.current.window.cursor
     line_content_mapping = vim.vars['line_content_mapping']
-    current_line_length = _get_current_line_length()
     current_line_content = vim.current.line
-
     vim.vars['line_visited'] = row
     line_content_mapping[int(row)] = current_line_content
     vim.command('let g:line_content_mapping = {}'.format(line_content_mapping))
 
-    meta_content = ' ' * (20) + line_meta_mapping[row]
+    meta_content = ' ' * (20) + commit_meta_mapping[line_commit_mapping[row]]
     vim.current.line += meta_content
     vim.current.window.cursor = cursor_position
 
