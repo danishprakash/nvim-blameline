@@ -6,13 +6,15 @@
 " =============================================================
 
 
-command! -nargs=1 Blameline call blameline#InitBlameline(<args>)
-command! -nargs=0 BlamelineUpdate call blameline#GetBlameOutput()
+command! -nargs=0 GetBlame call blameline#SetBlame()
 
-augroup blame
-    autocmd!
-    autocmd CursorHold * :Blameline(0)
-    autocmd CursorMoved * :Blameline(1)
-    autocmd TextChanged * :BlamelineUpdate
-    autocmd BufWinEnter * :BlamelineUpdate
-augroup END
+autocmd CursorMoved * call blameline#SetBlame()
+
+
+" augroup blame
+"     autocmd!
+"     autocmd CursorHold * :Blameline(0)
+"     autocmd CursorMoved * :Blameline(1)
+"     autocmd TextChanged * :BlamelineUpdate
+"     autocmd BufWinEnter * :BlamelineUpdate
+" augroup END

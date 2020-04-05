@@ -17,173 +17,80 @@ function! s:syntax() abort
     highlight link BLAMELINE Comment
 endfunction
 
+function! s:clear_blame() abort
+    if !has('nvim-0.3.2')
+        return
+    endif
 
-" updates `ut` or `updatetime` as per
-" global var g:blameline_update_time
-" which determines the delay in
-" triggering the CursorHold event
-function! s:set_update_time() abort
-    let &updatetime=g:blameline_update_time
+    let l:buffer = bufnr('')
+
+    call nvim_buf_clear_highlight(l:buffer, 1000, 0, -1)
 endfunction
 
+
+function! s:show_blame(message, hl_group) abort
+    if !has('nvim-0.3.2')
+        return
+    endif
+
+    let l:cursor_position = getcurpos()
+    let l:line = line('.')
+    let l:buffer = bufnr('')
+    let l:prefix = '  '
+
+    call nvim_buf_set_virtual_text(l:buffer, 1000, l:line-1, [[l:prefix.a:message, a:hl_group]], {})
+
+endfunction
+
+
+function! s:get_blameline(lineno) abort
+    " TODO: run this as an async job
+
+    let l:filename = expand("%:p")
+    let l:cmd = join([
+                \ 'git',
+                \ '--no-pager',
+                \ 'blame',
+                \ '-L',
+                \ a:lineno . ',' . a:lineno,
+                \ '--relative-date',
+                \ l:filename
+                \ ], ' ')
+
+    " TODO: check for git command failure
+    return join(systemlist(l:cmd))
+endfunction
+
+function! s:parse_blameline(bline)
+    let l:content = ""
+
+    let l:bline = split(a:bline)
+    let l:commit_sha = l:bline[0]
+    let l:message = join(l:bline[1:])
+
+    if l:commit_sha ==# '00000000'
+        let l:content = "Not commited yet"
+    else
+        let l:content = substitute(l:message, '\v([^\(]*\([^\)]*\)).*$', '\1', '')
+        let l:content = substitute(l:content, '(\|)', '', 'g')
+        let l:content = split(l:content)
+        let l:content = join(l:content[:len(l:content)-2])
+    endif
+
+    return l:content
+endfunction
+
+function! blameline#SetBlame() abort
+    let l:lineno = getcurpos()[1]
+    let l:line = s:parse_blameline(s:get_blameline(l:lineno))
+    let l:hl_group = 'Comment'
+
+    call s:clear_blame()
+    call s:show_blame(l:line, l:hl_group)
+endfunction
 
 function! s:err(msg) abort
     echohl ErrorMsg
     echom 'Blameline: '.a:msg
     echohl None
-endfunction
-
-
-function! s:git_tracked() abort
-    let py_exe = has('python3') ? 'python3' : 'python'
-    execute py_exe "<< EOF"
-
-import vim
-import subprocess
-
-
-def is_file_git_tracked():
-    file_path = vim.eval('expand("%:p")')
-    process = subprocess.Popen(['git', 'ls-files', '--error-unmatch', file_path], stdout=subprocess.PIPE)
-    process.communicate()[0]
-    if process.returncode != 0:
-        vim.command('let retvalue={}'.format(1))
-    else:
-        vim.command('let retvalue={}'.format(0))
-
-
-is_file_git_tracked()
-EOF
-
-    return l:retvalue
-endfunction
-
-
-" entry point for the plugin
-" checks for git and python
-" and calls other functions
-function! blameline#InitBlameline(flag) abort
-    if !executable('git')
-        return s:err("git is required")
-    endif
-
-    call s:git_tracked()
-    if s:git_tracked()
-        return
-    endif
-
-    call s:set_update_time()
-    call s:run(a:flag)
-endfunction
-
-
-" retrieves output for git blame
-" for the current file and creates
-" mapping in the following form:
-" {<line_no>: <content + blame>}
-function! blameline#GetBlameOutput() abort
-    let py_exe = has('python3') ? 'python3' : 'python'
-    execute py_exe "<< EOF"
-
-import re
-import vim
-import subprocess
-
-
-def git_blame():
-    file_path = vim.eval('expand("%:p")')
-    output = subprocess.check_output(['git', 'blame', file_path])
-    output = output.decode('utf-8').split('\n')[:-1]
-    create_mapping(output)
-
-
-def create_mapping(output):
-    temp = dict()
-    for line in output:
-        _line = (re.sub('[()]', '', line))
-        _line = _line.split(" ")
-        _line = [x for x in _line if x]
-
-        (commit, author, date, time) = (_line[:4])
-        line_no = _line[5]
-
-        meta = ':: {} - {} {} {} ::'.format(author, commit, time, date)
-        temp[line_no] = meta
-
-    vim.vars['line_meta_mapping'] = temp
-
-git_blame()
-EOF
-endfunction
-
-
-function! s:run(flag) abort
-    let py_exe = has('python3') ? 'python3' : 'python'
-    call s:syntax()
-    execute py_exe "<< EOF"
-
-import vim
-
-
-def _get_current_row_column():
-    return (vim.eval("getpos('.')")[1:3])
-
-
-def _get_current_line_length():
-    return int(vim.eval('col("$")'))
-
-
-def _setline():
-    if vim.current.line == '':
-        return
-
-    line_meta_mapping = vim.vars['line_meta_mapping']
-    (row, col) = _get_current_row_column()
-    if row not in line_meta_mapping.keys():
-        return
-
-    cursor_position = vim.current.window.cursor
-    line_content_mapping = vim.vars['line_content_mapping']
-    current_line_length = _get_current_line_length()
-    current_line_content = vim.current.line
-
-    vim.vars['line_visited'] = row
-    line_content_mapping[int(row)] = current_line_content
-    vim.command('let g:line_content_mapping = {}'.format(line_content_mapping))
-
-    meta_content = ' ' * (20) + line_meta_mapping[row]
-    vim.current.line += meta_content
-    vim.current.window.cursor = cursor_position
-
-
-def _unsetline():
-    row = vim.vars['line_visited']
-    if not row:
-        return
-
-    line_content_mapping = vim.vars['line_content_mapping']
-    (crow, ccol) = _get_current_row_column()
-    if crow == row or row not in line_content_mapping.keys():
-        return
-
-    vim.eval("setline({}, '{}')".format(row, line_content_mapping[row]))
-
-
-def _raise_error():
-    print("Blameline: Invalid argument")
-
-
-def main():
-    temp = vim.vars['line_meta_mapping']
-    if not temp:
-        vim.command('call blameline#GetBlameOutput()')
-
-    flag = int(vim.eval('a:flag'))
-    if flag == 0:
-        _setline()
-    elif flag == 1:
-        _unsetline()
-
-main()
-EOF
 endfunction
