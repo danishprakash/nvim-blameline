@@ -6,10 +6,8 @@
 " =============================================================
 
 
-let g:line_visited = ""
-let g:line_meta_mapping = {}
-let g:line_content_mapping = {}
-let g:blameline_update_time = 4000
+let s:timer_id = -1
+let s:blameline_delay = 1000
 
 
 function! s:syntax() abort
@@ -17,7 +15,7 @@ function! s:syntax() abort
     highlight link BLAMELINE Comment
 endfunction
 
-function! s:clear_blame() abort
+function! s:clear_blameline() abort
     if !has('nvim-0.3.2')
         return
     endif
@@ -80,17 +78,55 @@ function! s:parse_blameline(bline)
     return l:content
 endfunction
 
-function! blameline#SetBlame() abort
+function! s:set_blameline_with_delay(delay) abort
     let l:lineno = getcurpos()[1]
     let l:line = s:parse_blameline(s:get_blameline(l:lineno))
     let l:hl_group = 'Comment'
 
-    call s:clear_blame()
     call s:show_blame(l:line, l:hl_group)
+
+    " reset timer ID to prevent unnecessary timer_stop() invocations
+    let s:timer_id = -1 
+endfunction
+
+function! blameline#Enable() abort
+    call s:set_blameline()
+    augroup Blameline
+        autocmd!
+        autocmd CursorMoved * call s:set_blameline()
+        autocmd InsertEnter * call s:clear_blameline()
+    augroup END
+endfunction
+
+function! s:stop_cursor_timer() abort
+    if s:timer_id != -1
+        call timer_stop(s:timer_id)
+        let s:timer_id = -1
+    endif
+endfunction
+
+function! s:set_blameline() abort
+    if exists('g:blameline_delay')
+        let s:blameline_delay = get(g:, 'blameline_delay', 1000)
+    endif
+
+    call s:clear_blameline()
+    call s:stop_cursor_timer()
+    let s:timer_id = timer_start(s:blameline_delay, 
+                            \ function('s:set_blameline_with_delay'), 
+                            \ {})
 endfunction
 
 function! s:err(msg) abort
     echohl ErrorMsg
     echom 'Blameline: '.a:msg
     echohl None
+endfunction
+
+function! blameline#Disable() abort
+    call s:clear_blameline()
+    augroup Blameline
+        autocmd!
+    augroup END
+    augroup! Blameline
 endfunction
