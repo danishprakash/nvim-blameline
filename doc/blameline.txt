@@ -1,46 +1,72 @@
-*blameline*  GitLens's current line blame for vim
+*blameline*  GitLens's current line blame for nvim
 
 Author:  Danish Prakash <https://danishprakash.github.io>
-Repo:    https://github.com/danishprakash/vim-blameline
+Repo:    https://github.com/danishprakash/nvim-blameline
 License: GNU GPL v3
+=======================================================================
+CONTENTS                                           *blameline-contents*
+
+  1. Intro.....................................|blameline-intro|
+  3. Commands..................................|blameline-commands|
+  3. Autocommands..............................|blameline-autocommands|
+  4. Options...................................|blameline-options|
 
 =======================================================================
-Blameline allows you to preview the commit details for the current line
+INTRO                                                 *blameline-intro*
+
+Blameline allows you to preview the blame details for the current line
 It does so using the `git blame` command. It has been directly inspired
 by the current line blame functionality offered by GitLens for VSCode.
 
 =======================================================================
-AUTOCOMMANDS
+COMMANDS                                           *blameline-commands*
+
+                                                     *:BlamelineEnable*
+:BlamelineEnable
+    BlamelineEnable shows the blame metadata on the current lie and
+    creates autocmds to alter the behaviour of the plugin.
+    See |blameline-autocommands| for more details on the autocmds setup
+    by nvim-blameline.
+
+                                                    *:BlamelineDisable*
+:BlamelineDisable
+
+    BlamelineDisable clears the blame metadata from the current line and
+    also clears the autocommands setup by |BlamelineEnable|, see
+    |blameline-autocommands| for more details.
+
+=======================================================================
+AUTOCOMMANDS                                   *blameline-autocommands*
 
 The plugin works by executing certain functions with arguments
 on specific events. The following autocommands are used
 
-*CursorHold*
-    If the cursor is not moved for a certain amount of time, this
-    event is triggered. The time before the action is executed
-    is controlled by `ut` or `updatetime`
-
 *CursorMoved*
-    When you move the cursor, an action is triggered which removes
-    any commit meta on the line you have just moved from. The
-    action, however, ignores if you move on the same line.
+    When you move the cursor, an callback is triggered which removes
+    any commit meta on the line you have just moved from and
+    sequentially adds the blame metadata for the line you've landed.
 
-*TextChanged*
-    Whenever the user makes changes to the file, an action
-    is executed which updates the output of the `git blame` 
-    output. This ensures that the meta you are viewing is up to
-    date.
-
-*BufWinEnter*
-    This autocommand is triggered when you open or switch over to a
-    new buffer. It executes an action which updates the global 
-    variables used by the plugin for the new file.
+*InsertEnter*
+    Clear the blame metadata if it's present on the current line
+    if Insert mode has been entered by the user. This is done in
+    order to allow the user to write without and distraction due
+    to any moving parts i.e the blame metadata.
 
 =======================================================================
-OPTIONS
+OPTIONS                                             *blameline-options*
 
-*g:blameline_update_time* (default: 0)
-    Delay (in ms) before the commit metadata is shown, read `h: ut`
+*g:blameline_delay_time* (default: 1000)
+    Delay (in ms) before the commit metadata is shown
+
+*g:blameline_filetype_blacklist* 
+    Filetypes on which blameline should not act.
+    Defaults to the following:
+        let g:blameline_filetype_blacklist = [
+        \   'help',
+        \   'nerdtree',
+        \   'quickfix',
+        \   'tags',
+        \]
 
 =======================================================================
 LICENSE
@@ -53,7 +79,7 @@ CONTRIBUTING
 Do you want to make this better? Open an issue and/or a PR on Github.
 Thanks!
 
-Github:    https://github.com/danishprakash/vim-blameline
+Github:    https://github.com/danishprakash/nvim-blameline
 
 =======================================================================
 vim:tw=78:ts=8:ft=help:norl:noet:fen:
