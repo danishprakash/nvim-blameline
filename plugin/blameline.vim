@@ -1,7 +1,7 @@
 " =============================================================
-" Name:         vim-blameline
+" Name:         nvim-blameline
 " Maintainer:   Danish Prakash
-" HomePage:     https://github.com/danishprakash/vim-blameline
+" HomePage:     https://github.com/danishprakash/nvim-blameline
 " License:      GNU GPL
 " =============================================================
 
